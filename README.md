@@ -20,4 +20,4 @@ rubygem for encoding: rchardet19
 if you don`t have rchardet19 use:
 
 	gem install rchardet19
-	ruby jso,rb
+	ruby jso.rb
