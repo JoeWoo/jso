@@ -2,6 +2,7 @@
 jso is a simple Information Retrieval App for chinese documents with ruby.
 
 this search engine based on **Vector Space Model**
+
 the index will build every run time , it exist in the memory not in disk
 
 run system:
