@@ -11,7 +11,8 @@ linux & ruby2.0p0
 
 =======
 include component:
-ChineseWordSegmentation system: [NLPIR_for_ruby_linux_api](https://github.com/JoeWoo/NLPIR_for_ruby_linux_api)
+
+ChineseWordSegmentation system: [NLPIR_for_ruby_linux_api](https://github.com/JoeWoo/NLPIR_for_ruby_linux_api)  
 
 rubygem for encoding: rchardet19
 
