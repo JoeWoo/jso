@@ -18,5 +18,6 @@ rubygem for encoding: rchardet19
 	ruby jso.rb
 
 if you don`t have rchardet19 use:
+
 	gem install rchardet19
 	ruby jso,rb
