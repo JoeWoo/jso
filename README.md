@@ -3,18 +3,18 @@ jso is a simple Information Retrieval App for chinese documents with ruby.
 
 this search engine based on **Vector Space Model**
 
-the index will build every run time , it exist in the memory not in disk
+the index will be build at each run time , and it exists in memory not in disk
 
 run system:
-linux & ruby2.0p0 
+linux & ruby2.0.0p0 
 
 
 =======
-include component:
+app include component:
 
-ChineseWordSegmentation system: [NLPIR_for_ruby_linux_api](https://github.com/JoeWoo/NLPIR_for_ruby_linux_api)  
+1. ChineseWordSegmentation system: [NLPIR_for_ruby_linux_api](https://github.com/JoeWoo/NLPIR_for_ruby_linux_api)  
 
-rubygem for encoding: rchardet19
+2. rubygem for encoding: rchardet19
 
 ## How to use
 	ruby jso.rb
