@@ -15,7 +15,7 @@ ChineseWordSegmentation system: [NLPIR_for_ruby_linux_api](https://github.com/Jo
 
 rubygem for encoding: rchardet19
 
-## Run it
+## How to use
 	ruby jso.rb
 
 if you don`t have rchardet19 use:
