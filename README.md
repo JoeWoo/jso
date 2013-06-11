@@ -1,5 +1,5 @@
 # jso
-jso is a simple Information Retrieval App for chinese documents with ruby.
+jso is a simple Information Retrieval App for chinese documents by ruby language.
 
 this search engine based on **Vector Space Model**
 
