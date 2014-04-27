@@ -1,5 +1,5 @@
 require 'rchardet19'
-require File.dirname(__FILE__)+"/NLPIR.rb"
+require File.dirname(__FILE__)+"/nlpir.rb"
 include NLPIR
 
 module EncodeHelper
