@@ -1,298 +1,433 @@
-# coding: utf-8
+# encoding: UTF-8
 require 'fiddle'
 require 'fiddle/struct'
 require 'fiddle/import'
 require 'fileutils'
+require 'yaml'
+
 include Fiddle::CParser
 include Fiddle::Importer
 
-module Nlpir
-  NLPIR_FALSE = 0
-  NLPIR_TRUE = 1
-  POS_MAP_NUMBER = 4
-  ICT_POS_MAP_FIRST = 1            #计算所一级标注集
-  ICT_POS_MAP_SECOND = 0       #计算所二级标注集
-  PKU_POS_MAP_SECOND = 2       #北大二级标注集
-  PKU_POS_MAP_FIRST = 3     	#北大一级标注集
-  POS_SIZE = 40
+NLPIR_FALSE = 0
+NLPIR_TRUE = 1
+POS_MAP_NUMBER = 4
+ICT_POS_MAP_FIRST = 1            #计算所一级标注集
+ICT_POS_MAP_SECOND = 0       #计算所二级标注集
+PKU_POS_MAP_SECOND = 2       #北大二级标注集
+PKU_POS_MAP_FIRST = 3     	#北大一级标注集
+POS_SIZE = 40
 
-  Result_t = struct ['int start','int length',"char  sPOS[#{POS_SIZE}]",'int iPOS',
-  		          'int word_ID','int word_type','int weight']
+Result_t = struct ['int start','int length',"char  sPOS[#{POS_SIZE}]",'int iPOS',
+									 'int word_ID','int word_type','int weight']
 
-  GBK_CODE = 0                                                    #默认支持GBK编码
-  UTF8_CODE = GBK_CODE + 1                          #UTF8编码
-  BIG5_CODE = GBK_CODE + 2                          #BIG5编码
-  GBK_FANTI_CODE = GBK_CODE + 3             #GBK编码，里面包含繁体字
+GBK_CODE = 0                                                    #默认支持GBK编码
+UTF8_CODE = GBK_CODE + 1                          #UTF8编码
+BIG5_CODE = GBK_CODE + 2                          #BIG5编码
+GBK_FANTI_CODE = GBK_CODE + 3             #GBK编码，里面包含繁体字
 
-  @charset = 'utf-8'
+class Nlpir
 
-  #提取链接库接口
-  libm = Fiddle.dlopen(File.expand_path("../bin/libNLPIR.so", __FILE__))
-
- NLPIR_Init_rb = Fiddle::Function.new(
-    libm['NLPIR_Init'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_Exit_rb = Fiddle::Function.new(
-    libm['NLPIR_Exit'],
-    [],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_ImportUserDict_rb = Fiddle::Function.new(
-    libm['NLPIR_ImportUserDict'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_ParagraphProcess_rb = Fiddle::Function.new(
-    libm['NLPIR_ParagraphProcess'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_ParagraphProcessA_rb = Fiddle::Function.new(
-    libm['NLPIR_ParagraphProcessA'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_FileProcess_rb = Fiddle::Function.new(
-    libm['NLPIR_FileProcess'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT],
-    Fiddle::TYPE_DOUBLE
-  )
-  NLPIR_GetParagraphProcessAWordCount_rb = Fiddle::Function.new(
-    libm['NLPIR_GetParagraphProcessAWordCount'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_ParagraphProcessAW_rb = Fiddle::Function.new(
-    libm['NLPIR_ParagraphProcessAW'],
-    [Fiddle::TYPE_INT,Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_AddUserWord_rb = Fiddle::Function.new(
-    libm['NLPIR_AddUserWord'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_SaveTheUsrDic_rb = Fiddle::Function.new(
-    libm['NLPIR_SaveTheUsrDic'],
-    [],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_DelUsrWord_rb = Fiddle::Function.new(
-    libm['NLPIR_DelUsrWord'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_GetKeyWords_rb = Fiddle::Function.new(
-    libm['NLPIR_GetKeyWords'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_GetFileKeyWords_rb = Fiddle::Function.new(
-    libm['NLPIR_GetFileKeyWords'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_GetNewWords_rb = Fiddle::Function.new(
-    libm['NLPIR_GetNewWords'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_GetFileNewWords_rb = Fiddle::Function.new(
-    libm['NLPIR_GetFileNewWords'],
-    [Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_FingerPrint_rb = Fiddle::Function.new(
-    libm['NLPIR_FingerPrint'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_LONG
-  )
-  NLPIR_SetPOSmap_rb = Fiddle::Function.new(
-    libm['NLPIR_SetPOSmap'],
-    [Fiddle::TYPE_INT],
-    Fiddle::TYPE_INT
-  )
-
-  NLPIR_NWI_Start_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_Start'],
-    [],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_NWI_AddFile_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_AddFile'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_NWI_AddMem_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_AddMem'],
-    [Fiddle::TYPE_VOIDP],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_NWI_Complete_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_Complete'],
-    [],
-    Fiddle::TYPE_INT
-  )
-  NLPIR_NWI_GetResult_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_GetResult'],
-    [Fiddle::TYPE_INT],
-    Fiddle::TYPE_VOIDP
-  )
-  NLPIR_NWI_Result2UserDict_rb = Fiddle::Function.new(
-    libm['NLPIR_NWI_Result2UserDict'],
-    [],
-    Fiddle::TYPE_VOIDP
-  )
-
-  #--函数
-
-  def NLPIR_Init(sInitDirPath=nil , encoding=UTF8_CODE)
-    sInitDirPath += "/Data/"
-    if File.exist?(sInitDirPath)==false
-      FileUtils.mkdir(sInitDirPath)
-      filemother = File.expand_path("../Data/", __FILE__)
-      FileUtils.copy_entry filemother,sInitDirPath
-    end
-    @charset = 'gbk' if encoding == GBK_CODE
-    @charset = 'utf-8' if encoding == UTF8_CODE
-    @charset = 'big5' if  encoding == BIG5_CODE
-    @charset = 'gbk' if encoding == GBK_FANTI_CODE
-    NLPIR_Init_rb.call(nil,encoding)
-  end
-  alias :nlpir_init  :NLPIR_Init
-
-  def NLPIR_Exit()
-    NLPIR_Exit_rb.call()
-  end
-  alias :nlpir_exit :NLPIR_Exit
-
-  def NLPIR_ImportUserDict(sFilename)
-    NLPIR_ImportUserDict_rb.call(sFilename)
-  end
-  alias :import_userdict :NLPIR_ImportUserDict
-
-  def NLPIR_ParagraphProcess(sParagraph, bPOStagged=NLPIR_TRUE)
-    NLPIR_ParagraphProcess_rb.call(sParagraph, bPOStagged).to_s.force_encoding(@charset)
-  end
-  alias :text_proc :NLPIR_ParagraphProcess
-
-  def NLPIR_ParagraphProcessA(sParagraph)
-    resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
-    pResultCount = Fiddle::Pointer.to_ptr(resultCount)
-    p = NLPIR_ParagraphProcessA_rb.call(sParagraph, pResultCount.ref.to_i)
-    pVecResult = Fiddle::Pointer.new(p.to_i)
-    words_list = []
-    words_list << Result_t.new(pVecResult)
-    for i in 1...resultCount  do
-        words_list << Result_t.new(pVecResult += Result_t.size)
-    end
-    return words_list
-  end
-  alias :text_procA :NLPIR_ParagraphProcessA
-
-  def NLPIR_GetParagraphProcessAWordCount(sParagraph)
-    NLPIR_GetParagraphProcessAWordCount_rb.call(sParagraph)
-  end
-  alias :text_wordcount :NLPIR_GetParagraphProcessAWordCount
-
-  def NLPIR_FileProcess(sSourceFilename, sResultFilename, bPOStagged=NLPIR_TRUE)
-    NLPIR_FileProcess_rb.call(sSourceFilename, sResultFilename, bPOStagged)
-  end
-  alias :file_proc :NLPIR_FileProcess
+	@charset = 'utf-8'
+	@core_words = {}
+	#提取链接库接口
+	libm = 0
+	if RUBY_PLATFORM=="x86_64-linux"
+		libm = Fiddle.dlopen(File.expand_path("../lib/libNLPIRx64.so", __FILE__))
+	elsif RUBY_PLATFORM=="i386-linux"
+		libm = Fiddle.dlopen(File.expand_path("../lib/libNLPIRx32.so", __FILE__))
+	elsif RUBY_PLATFORM=="x86_64-mingw32"
+		libm = Fiddle.dlopen(File.expand_path("../lib/NLPIRx64.dll", __FILE__))
+	elsif RUBY_PLATFORM=="i386-mingw32"
+		libm = Fiddle.dlopen(File.expand_path("../lib/NLPIRx32.dll", __FILE__))
+	else
+		puts "can`t support"
+	end
 
 
-  def NLPIR_ParagraphProcessAW(sParagraph)
-    free = Fiddle::Function.new(Fiddle::RUBY_FREE, [TYPE_VOIDP], TYPE_VOID)
-    resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
-    pVecResult = Pointer.malloc(Result_t.size*resultCount,free)
-    NLPIR_ParagraphProcessAW_rb.call(resultCount,pVecResult)
-    words_list = []
-    words_list << Result_t.new(pVecResult)
-    for i in 1...resultCount do
-        words_list << Result_t.new(pVecResult+=Result_t.size)
-    end
-    return words_list
-  end
-  alias :text_procAW :NLPIR_ParagraphProcessAW
+	NLPIR_Init_rb = Fiddle::Function.new(
+		libm['NLPIR_Init'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_Exit_rb = Fiddle::Function.new(
+		libm['NLPIR_Exit'],
+		[],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_ImportUserDict_rb = Fiddle::Function.new(
+		libm['NLPIR_ImportUserDict'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_ParagraphProcess_rb = Fiddle::Function.new(
+		libm['NLPIR_ParagraphProcess'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_ParagraphProcessA_rb = Fiddle::Function.new(
+		libm['NLPIR_ParagraphProcessA'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_FileProcess_rb = Fiddle::Function.new(
+		libm['NLPIR_FileProcess'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT],
+		Fiddle::TYPE_DOUBLE
+	)
+	NLPIR_GetParagraphProcessAWordCount_rb = Fiddle::Function.new(
+		libm['NLPIR_GetParagraphProcessAWordCount'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_ParagraphProcessAW_rb = Fiddle::Function.new(
+		libm['NLPIR_ParagraphProcessAW'],
+		[Fiddle::TYPE_INT,Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_AddUserWord_rb = Fiddle::Function.new(
+		libm['NLPIR_AddUserWord'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_SaveTheUsrDic_rb = Fiddle::Function.new(
+		libm['NLPIR_SaveTheUsrDic'],
+		[],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_DelUsrWord_rb = Fiddle::Function.new(
+		libm['NLPIR_DelUsrWord'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_GetKeyWords_rb = Fiddle::Function.new(
+		libm['NLPIR_GetKeyWords'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_GetFileKeyWords_rb = Fiddle::Function.new(
+		libm['NLPIR_GetFileKeyWords'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_GetNewWords_rb = Fiddle::Function.new(
+		libm['NLPIR_GetNewWords'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_GetFileNewWords_rb = Fiddle::Function.new(
+		libm['NLPIR_GetFileNewWords'],
+		[Fiddle::TYPE_VOIDP,Fiddle::TYPE_INT,Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_FingerPrint_rb = Fiddle::Function.new(
+		libm['NLPIR_FingerPrint'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_LONG
+	)
+	NLPIR_SetPOSmap_rb = Fiddle::Function.new(
+		libm['NLPIR_SetPOSmap'],
+		[Fiddle::TYPE_INT],
+		Fiddle::TYPE_INT
+	)
+
+	NLPIR_NWI_Start_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_Start'],
+		[],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_NWI_AddFile_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_AddFile'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_NWI_AddMem_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_AddMem'],
+		[Fiddle::TYPE_VOIDP],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_NWI_Complete_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_Complete'],
+		[],
+		Fiddle::TYPE_INT
+	)
+	NLPIR_NWI_GetResult_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_GetResult'],
+		[Fiddle::TYPE_INT],
+		Fiddle::TYPE_VOIDP
+	)
+	NLPIR_NWI_Result2UserDict_rb = Fiddle::Function.new(
+		libm['NLPIR_NWI_Result2UserDict'],
+		[],
+		Fiddle::TYPE_VOIDP
+	)
+
+	#--函数
+
+	def self.core_words_exist?(word)
+		@core_words.has_key?(word)
+	end
+
+	def self.get_core_words_size()
+		@core_words.size
+	end
+
+	def self.set_core_words(word, id)
+		@core_words[word] = id
+	end
+
+	def self.get_core_words_id(word)
+		@core_words[word]
+	end
+
+	def self.NLPIR_Init(sInitDirPath=nil , encoding=UTF8_CODE)
+		sInitDirPath += "/Data/"
+		if File.exist?(sInitDirPath)==false
+			FileUtils.mkdir(sInitDirPath)
+			filemother = File.expand_path("../Data/", __FILE__)
+			FileUtils.copy_entry filemother,sInitDirPath
+		end
+		@charset = 'gbk' if encoding == GBK_CODE
+		@charset = 'utf-8' if encoding == UTF8_CODE
+		@charset = 'big5' if  encoding == BIG5_CODE
+		@charset = 'gbk' if encoding == GBK_FANTI_CODE
+		File.open(File.dirname(__FILE__)+"/dex/core_words_list.yaml") do |f|
+			@core_words =  YAML.load(f.read)
+		end
+		File.open(File.dirname(__FILE__)+"/dex/stop_words_list.yaml") do |f|
+			@stop_words =  YAML.load(f.read)
+		end
+		NLPIR_Init_rb.call(nil,encoding)
+	end
+
+	def self.NLPIR_Exit()
+		ok = true
+		n = ""
+		begin
+			n = @core_words.to_yaml
+		rescue
+			ok = false
+			puts "core_words.yaml error!"
+		end
+		if ok==true
+			File.open(File.dirname(__FILE__)+"/dex/core_words_list.yaml","w") do |f|
+				f << n
+			end
+		end
+		NLPIR_Exit_rb.call()
+	end
 
 
-  def NLPIR_AddUserWord(sWord)
-    NLPIR_AddUserWord_rb.call(sWord)
-  end
-  alias :add_userword :NLPIR_AddUserWord
+	def self.NLPIR_ImportUserDict(sFilename)
+		NLPIR_ImportUserDict_rb.call(sFilename)
+	end
 
-  def NLPIR_SaveTheUsrDic()
-    NLPIR_SaveTheUsrDic_rb.call()
-  end
-  alias :save_userdict :NLPIR_SaveTheUsrDic
 
-  def NLPIR_DelUsrWord(sWord)
-    NLPIR_DelUsrWord_rb.call(sWord)
-  end
-  alias :del_userword :NLPIR_DelUsrWord
+	def self.NLPIR_ParagraphProcess(sParagraph, bPOStagged=NLPIR_TRUE)
+		NLPIR_ParagraphProcess_rb.call(sParagraph, bPOStagged).to_s
+	end
 
-  def NLPIR_GetKeyWords(sLine, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
-    NLPIR_GetKeyWords_rb.call(sLine, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
-  end
-  alias :text_keywords :NLPIR_GetKeyWords
 
-  def NLPIR_GetFileKeyWords(sTextFile, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
-    line = NLPIR_GetFileKeyWords_rb.call(sTextFile, nMaxKeyLimit, bWeightOut).to_s
-    line.force_encoding('gbk')
-    line.encode!(@charset)
-  end
-  alias :file_keywords :NLPIR_GetFileKeyWords
+	def self.NLPIR_ParagraphProcessA(sParagraph)
+		resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
+		pResultCount = Fiddle::Pointer.to_ptr(resultCount)
+		p = NLPIR_ParagraphProcessA_rb.call(sParagraph, pResultCount.ref.to_i)
+		pVecResult = Fiddle::Pointer.new(p.to_i)
+		words_list = []
+		0.upto(resultCount-1)  do
+			word = Result_t.new(pVecResult)
+			str = sParagraph.byteslice(word.start,word.length)
+			# puts (word.start.to_s << "--" <<(word.start+word.length).to_s)
+			# str.encode!( 'utf-8', "binary", :invalid => :replace, :undef => :replace)
+			# str.strip!
+			if !str.nil? && !str.empty?
+				words_list << word
+			end
+			#puts str
+			pVecResult += Result_t.size
+		end
+		return words_list
+	end
 
-  def NLPIR_GetNewWords(sLine, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
-    NLPIR_GetNewWords_rb.call(sLine, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
-  end
-  alias :text_newwords :NLPIR_GetNewWords
 
-  def NLPIR_GetFileNewWords(sTextFile, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
-    NLPIR_GetFileNewWords_rb.call(sTextFile, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
-  end
-  alias :file_newwords :NLPIR_GetFileNewWords
+	def self.NLPIR_GetParagraphProcessAWordCount(sParagraph)
+		NLPIR_GetParagraphProcessAWordCount_rb.call(sParagraph)
+	end
 
-  def NLPIR_FingerPrint(sLine)
-    NLPIR_FingerPrint_rb.call(sLine)
-  end
-  alias :text_fingerprint :NLPIR_FingerPrint
+	def self.NLPIR_FileProcess(sSourceFilename, sResultFilename, bPOStagged=NLPIR_TRUE)
+		NLPIR_FileProcess_rb.call(sSourceFilename, sResultFilename, bPOStagged)
+	end
 
-  def NLPIR_SetPOSmap(nPOSmap)
-    NLPIR_SetPOSmap_rb.call(nPOSmap)
-  end
-  alias :setPOSmap :NLPIR_SetPOSmap
 
-  def NLPIR_NWI_Start()
-    NLPIR_NWI_Start_rb.call()
-  end
-  alias :NWI_start :NLPIR_NWI_Start
+	def self.NLPIR_ParagraphProcessAW(sParagraph)
+		free = Fiddle::Function.new(Fiddle::RUBY_FREE, [TYPE_VOIDP], TYPE_VOID)
+		resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
+		pVecResult = Pointer.malloc(Result_t.size*resultCount,free)
+		NLPIR_ParagraphProcessAW_rb.call(resultCount,pVecResult)
+		words_list = []
+		words_list << Result_t.new(pVecResult)
+		1.upto(resultCount-1) do
+			words_list << Result_t.new(pVecResult+=Result_t.size)
+		end
+		return words_list
+	end
 
-  def NLPIR_NWI_AddFile(sFilename)
-    NLPIR_NWI_AddFile_rb.call(sFilename)
-  end
-  alias :NWI_addfile :NLPIR_NWI_AddFile
 
-  def NLPIR_NWI_AddMem(sFilename)
-    NLPIR_NWI_AddMem_rb.call(sFilename)
-  end
-  alias :NWI_addmem :NLPIR_NWI_AddMem
+	def self.NLPIR_AddUserWord(sWord)
+		NLPIR_AddUserWord_rb.call(sWord)
+	end
 
-  def NLPIR_NWI_Complete()
-    NLPIR_NWI_Complete_rb.call()
-  end
-  alias :NWI_complete :NLPIR_NWI_Complete
+	def self.NLPIR_SaveTheUsrDic()
+		NLPIR_SaveTheUsrDic_rb.call()
+	end
 
-  def NLPIR_NWI_GetResult( bWeightOut = NLPIR_FALSE)
-    NLPIR_NWI_GetResult_rb.call(bWeightOut)
-  end
-  alias :NWI_result :NLPIR_NWI_GetResult
+	def self.NLPIR_DelUsrWord(sWord)
+		NLPIR_DelUsrWord_rb.call(sWord)
+	end
 
-  def NLPIR_NWI_Result2UserDict()
-    NLPIR_NWI_Result2UserDict_rb.call()
-  end
-  alias :NWI_result2userdict :NLPIR_NWI_Result2UserDict
+	def self.NLPIR_GetKeyWords(sLine, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
+		NLPIR_GetKeyWords_rb.call(sLine, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
+	end
 
-  end
+	def self.NLPIR_GetFileKeyWords(sTextFile, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
+		line = NLPIR_GetFileKeyWords_rb.call(sTextFile, nMaxKeyLimit, bWeightOut).to_s
+		line.force_encoding('gbk')
+		line.encode!(@charset)
+	end
+
+	def self.NLPIR_GetNewWords(sLine, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
+		NLPIR_GetNewWords_rb.call(sLine, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
+	end
+
+	def self.NLPIR_GetFileNewWords(sTextFile, nMaxKeyLimit=50, bWeightOut=NLPIR_FALSE)
+		NLPIR_GetFileNewWords_rb.call(sTextFile, nMaxKeyLimit, bWeightOut).to_s.force_encoding(@charset)
+	end
+
+	def self.NLPIR_FingerPrint(sLine)
+		NLPIR_FingerPrint_rb.call(sLine)
+	end
+
+	def self.NLPIR_SetPOSmap(nPOSmap)
+		NLPIR_SetPOSmap_rb.call(nPOSmap)
+	end
+
+	def self.NLPIR_NWI_Start()
+		NLPIR_NWI_Start_rb.call()
+	end
+
+
+	def self.NLPIR_NWI_AddFile(sFilename)
+		NLPIR_NWI_AddFile_rb.call(sFilename)
+	end
+
+	def self.NLPIR_NWI_AddMem(sFilename)
+		NLPIR_NWI_AddMem_rb.call(sFilename)
+	end
+
+	def self.NLPIR_NWI_Complete()
+		NLPIR_NWI_Complete_rb.call()
+	end
+
+	def self.NLPIR_NWI_GetResult( bWeightOut = NLPIR_FALSE)
+		NLPIR_NWI_GetResult_rb.call(bWeightOut)
+	end
+
+	def self.NLPIR_NWI_Result2UserDict()
+		NLPIR_NWI_Result2UserDict_rb.call()
+	end
+
+
+
+	#my add func
+
+	def self.seg(sParagraph,flag=NLPIR_FALSE)
+		# resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
+		# pResultCount = Fiddle::Pointer.to_ptr(resultCount)
+		# p = NLPIR_ParagraphProcessA_rb.call(sParagraph, pResultCount.ref.to_i)
+		# pVecResult = Fiddle::Pointer.new(p.to_i)
+		#sParagraph.encode!('UTF-8', 'UTF-8', :invalid => :replace)
+		result = NLPIR_ParagraphProcess(sParagraph,flag)
+		result_list = []
+		result_array = result.split(' ')
+		puts "删除停用词前：#{result_array.size}"
+		result_array.each{  |t|
+			if t.force_encoding("UTF-8").valid_encoding?
+				result_list << t.force_encoding("UTF-8")
+			end
+		}
+		result_list = result_list - @stop_words
+		puts "删除停用词后：#{result_list.size}"
+		return result_list
+	end
+
+	def self.NLPIR_ParagraphProcessA_simple(sParagraph)
+		# resultCount = NLPIR_GetParagraphProcessAWordCount(sParagraph)
+		# pResultCount = Fiddle::Pointer.to_ptr(resultCount)
+		# p = NLPIR_ParagraphProcessA_rb.call(sParagraph, pResultCount.ref.to_i)
+		# pVecResult = Fiddle::Pointer.new(p.to_i)
+		# ids_list = []
+		tt = NLPIR_ParagraphProcess(sParagraph,NLPIR_FALSE)
+		result = tt
+		# result.slice!(tt.size-1)
+		# result.slice!(0)
+		# result.gsub!(/\\[n]/,"")
+		result_array = result.split(' ')
+		result_array -= @stop_words
+		result_array.each  do  |word|
+			if  @core_words.has_key?(word) == false
+				id = (@core_words.size+1)
+				@core_words[word] = id
+				ids_list << id
+			else
+				ids_list << @core_words[word]
+			end
+			ids_list
+		end
+	end
+
+
+	class << self
+		alias_method :save_userdict , :NLPIR_SaveTheUsrDic
+		alias_method :add_userword, :NLPIR_AddUserWord
+		alias_method :text_procAW , :NLPIR_ParagraphProcessAW
+		alias_method :file_proc , :NLPIR_FileProcess
+		alias_method :text_wordcount , :NLPIR_GetParagraphProcessAWordCount
+		alias_method :text_procA, :NLPIR_ParagraphProcessA
+		alias_method :text_proc, :NLPIR_ParagraphProcess
+		alias_method :nlpir_init,  :NLPIR_Init
+		alias_method :nlpir_exit, :NLPIR_Exit
+		alias_method :import_userdict, :NLPIR_ImportUserDict
+		alias_method :del_userword, :NLPIR_DelUsrWord
+		alias_method :text_keywords, :NLPIR_GetKeyWords
+		alias_method :file_keywords, :NLPIR_GetFileKeyWords
+		alias_method :text_newwords, :NLPIR_GetNewWords
+		alias_method :file_newwords, :NLPIR_GetFileNewWords
+		alias_method :text_fingerprint, :NLPIR_FingerPrint
+		alias_method :setPOSmap, :NLPIR_SetPOSmap
+		alias_method :NWI_start, :NLPIR_NWI_Start
+		alias_method :NWI_addfile, :NLPIR_NWI_AddFile
+		alias_method :NWI_addmem, :NLPIR_NWI_AddMem
+		alias_method :NWI_complete, :NLPIR_NWI_Complete
+		alias_method :NWI_result, :NLPIR_NWI_GetResult
+		alias_method :NWI_result2userdict, :NLPIR_NWI_Result2UserDict
+		alias_method :text_procA_simple, :NLPIR_ParagraphProcessA_simple
+	end
+
+end
+# include Nlpir
+#  nlpir_init(File.dirname(__FILE__))
+# # goodf = File.new(File.dirname(__FILE__)+"/result2.txt","w")
+# # goodf2 = File.new(File.dirname(__FILE__)+"/result.txt","w")
+# # File.open(File.dirname(__FILE__)+"/dex/stop_int.txt") do |f|
+# # 	text = f.read()
+# # 	goodf2 << text_proc(text,NLPIR_FALSE)
+# # 		m = text_procA_simple(text)
+# # 		m.each do |t|
+# # 			goodf << "- "<<t.to_s<<"\n"
+# # 		end
+# # end
+# # goodf.close()
+# # goodf2.close()
+# t = "嗬嗯嗳"
+# puts text_procA_simple(t)
+# puts text_proc(t)
+# nlpir_exit

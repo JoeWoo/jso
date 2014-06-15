@@ -1,0 +1,48 @@
+#resultStats {
+color: #808080;
+height:40px;
+padding-left: 16px;
+padding-top: 0;
+padding-bottom: 0;
+padding-right: 8px;
+line-height: 35px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+#tips{
+  padding-left: 16px;
+  height:40px;
+  line-height: 35px;
+}
+.item{
+  padding-left: 16px;
+  margin-top: 25px;
+}
+.abstract{
+  color:#808080;
+}
+.filename{
+  height:18px;
+  line-height:18px;
+  text-decoration: none;
+}
+.filename_link{
+  color: #1a0dab;
+  font-size: 18px!important;
+}
+.filename_link:hover{
+  color: #1a0dab;
+}
+.filename_link:visited{
+  color:#609;
+}
+.filepath{
+  color: #006621;
+}
+.filepath:hover{
+  color: #006621;
+}
+.til:hover{
+  cursor: pointer;
+}

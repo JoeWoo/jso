@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Docgle</title>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<!-- Bootstrap -->
+	<link href="./static/vendor/css/bootstrap.min.css" rel="stylesheet">
+	<!-- TODC Bootstrap theme -->
+	<link href="./static/vendor/css/todc-bootstrap.min.css" rel="stylesheet">
+	<link href="./static/index.css" rel="stylesheet"></head>
+<body style="padding-top: 70px;">
+	<div class="container" >
+		<div class="navbar  navbar-default navbar-fixed-top" >
+			<div class="navbar-header">
+				<a class="navbar-brand til" onclick="direct_to_bigsearch();">磁盘文件检索</a>
+			</div>
+			<nav class="collapse navbar-collapse" role="navigation">
+				<ul class="nav navbar-nav navbar-right">
+					<!-- Button trigger modal -->
+					<li>
+						<a href="#" style="text-decoration:none" onclick="get_olddir();"  data-target="#myModal">
+							设置
+							<span class="glyphicon glyphicon-cog glyphicon-white"></span>
+						</a>
+					</li>
+					<li>
+						<a href="#"></a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+<div id="search-result" style="display:none" >
+	<div style="height:71px;background:#f1f1f1;margin-top:-40px;border-bottom: 1px solid #666;border-color: #e5e5e5;">
+		<div style="height:20px;"></div>
+		<a class="til" onclick="direct_to_bigsearch();">
+			<img src="./static/jso-min.png" style="width:120px;margin-top:-3px;margin-left:10px;display:block;float:left;">
+		</a>
+		<div class="row">
+			<div class="form-group  col-xs-5">
+				<label class="sr-only" for="keyword">Keywords</label>
+				<input type="search" class="form-control" id="keyword" placeholder="键入查询关键字" onkeydown="judge_enter('keyword');"></div>
+			<button  class="btn btn-primary" onclick="search();">Doc搜索</button>
+		</div>
+	</div>
+	<ul class="nav nav-tabs nav-tabs-google">
+		<li style="width:150px;height:30px;display:block;"></li>
+		<li id="liall" class="active">
+			<a onclick="active('liall');">All</a>
+		</li>
+		<li id="lidoc">
+			<a onclick="active('lidoc');">文字</a>
+		</li>
+		<li id="lixls">
+			<a onclick="active('lixls');">表格</a>
+		</li>
+		<li id="lippt">
+			<a onclick="active('lippt');">演示文稿</a>
+		</li>
+		<li id="liother">
+			<a onclick="active('liother');">其他</a>
+		</li>
+	</ul>
+	<div>
+		<div style="width:150px;height:650px;float:left;"></div>
+		<div style="width:550px;height:650px;float:left">
+			<div style="height:80px; ">
+				<div id="resultStats">
+					找到约
+					<span id="count">15,200,000</span>
+					条结果
+					<nobr>
+						（用时
+						<span id="timecost">0.29</span>
+						秒）&nbsp;
+					</nobr>
+				</div>
+				<div id="tips">小提示： 本系统支持检索英文、中文</div>
+			</div>
+
+			<div id="result" style="list-style-type:none;border-top: 1px solid #666;border-color: #e5e5e5;padding-top:10px;"></div>
+			<div style="border-top: 1px solid #666;border-color: #e5e5e5;">
+				<ul id="pager">
+
+				</ul>
+			</div>
+
+		</div>
+
+	</div>
+</div>
+
+	<div id="hidden-add" style="visibility:hidden"></div>
+	<input id="hidden-result" type="hidden" value=""></input>
+	<div id="big-search" style="display:block;">
+		<div class="container">
+			<div style="width:600px;margin:0 auto;margin-top:180px;">
+				<div class="col-xs-1"></div>
+				<img src="./static/jso-min.png" style="width:500px;"></img>
+			<div style="height:30px;"></div>
+		</div>
+		<div class="row">
+			<div class="col-xs-3"></div>
+			<div class="form-group  col-xs-5">
+				<label class="sr-only" for="keyword">Keywords</label>
+				<input type="search" id="querysentence" class="form-control" id="keyword" placeholder="键入查询关键字" onkeydown="judge_enter('querysentence');"></div>
+			<button  class="btn btn-primary" onclick="bigsearch();" >Doc搜索</button>
+		</div>
+	</div>
+	<nav class="navbar navbar-inverse navbar-fixed-bottom">
+		<ul class="nav navbar-nav" >
+			<li class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown" style="text-decoration:none">
+					<span class="glyphicon glyphicon-th-list glyphicon-white"></span>
+					关于
+				</a>
+				<ul class="dropdown-menu">
+					<li>
+						<a href="/setting/form">索引目录</a>
+					</li>
+					<li>
+						<a href="/doctype">文件格式</a>
+					</li>
+					<li>
+						<a href="/about">关于</a>
+					</li>
+				</ul>
+			</li>
+		</ul>
+		<ul class="nav navbar-nav navbar-right">
+			<li>
+				<a href="#">Docgle 保护您的信息安全</a>
+			</li>
+			<li>
+				<a href="#"></a>
+			</li>
+		</ul>
+	</nav>
+
+</div>
+<!-- Modal -->
+<div class="modal fade bs-example-modal-lg" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h4 class="modal-title" id="myModalLabel">搜索配置</h4>
+			</div>
+			<div class="modal-body">
+				<ul>
+					<li>
+						<h4>索引目录：</h4>
+						<div class="form-inline">
+							<input type="text" id="dirpath" class="form-control" style="width:450px;" placeholder="键入需要索引的目录"></input>
+						<button class="btn btn-primary" onclick="add_dir();">添加</button>
+						<table class="table  table-bordered" style="width:450px;max-height:400px;" >
+							<thead>
+								<tr class="active">
+									<th style="width:25px;">#</th>
+									<th>已设定的目录</th>
+								</tr>
+							</thead>
+							<tbody id="olddir">
+								<tr class="active">
+									<td>1</td>
+									<td>doc/fdf/fdf/</td>
+								</tr>
+								<tr class="active">
+									<td>1</td>
+									<td>doc/fdf/fdf/</td>
+								</tr>
+								<tr class="active">
+									<td>1</td>
+									<td>doc/fdf/fdf/</td>
+								</tr>
+								<tr class="active">
+									<td>1</td>
+									<td>doc/fdf/fdf/</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</li>
+
+				<li>
+					<h4>文件格式：</h4>
+					<div id="doctypelist">
+						<label class="checkbox-inline">
+							<input type="checkbox" id="inlineCheckbox1" value="doc" checked="true">doc</input>
+					</label>
+					<label class="checkbox-inline">
+						<input type="checkbox" id="inlineCheckbox2" value="docx"  checked="true">docx</input>
+				</label>
+				<label class="checkbox-inline">
+					<input type="checkbox" id="inlineCheckbox3" value="pdf"  checked="true">pdf</input>
+			</label>
+			<label class="checkbox-inline">
+				<input type="checkbox" id="inlineCheckbox4" value="xls"  checked="true">xls</input>
+		</label>
+		<label class="checkbox-inline">
+			<input type="checkbox" id="inlineCheckbox5" value="xlsx"  checked="true">xlsx</input>
+	</label>
+	<label class="checkbox-inline">
+		<input type="checkbox" id="inlineCheckbox6" value="ppt"  checked="true">ppt</input>
+</label>
+<label class="checkbox-inline">
+	<input type="checkbox" id="inlineCheckbox7" value="pptx"  checked="true">pptx</input>
+</label>
+<label class="checkbox-inline">
+<input type="checkbox" id="inlineCheckbox8" value="txt"  checked="true">txt</input>
+</label>
+<button id="control-check" class="btn btn-primary" style="margin-left:25px;" onclick="clear_checkbox()">反选</button>
+</div>
+</li>
+<li>
+<h4>实时监控：</h4>
+<div class="radio">
+<label>
+<input type="radio" name="optionsRadios" id="optionsRadios1" value="option1" checked>启用（此选项生效后，将会监视文件系统，并保持索引与文件同步）</label>
+</div>
+<div class="radio">
+<label>
+<input type="radio" name="optionsRadios" id="optionsRadios2" value="option2">禁用（此选项适用于目录下文件不再变动的情形）</label>
+</div>
+</li>
+<li>
+	<h4>系统控制：</h4>
+	<button type="button" class="btn btn-success" onclick="init();"  data-target="#showstat2">清空系统</button>
+	<button type="button" class="btn btn-success" onclick="rebuild();" data-target="#showstat3">重建系统</button>
+</li>
+
+
+</ul>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+<button type="button" class="btn btn-primary" onclick="save_settings();" data-target="#showstat">保存</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade" id="showstat" tabindex="-2" role="dialog" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+<h4 class="modal-title" id="myModalLabel">正在索引，请稍后.......</h4>
+</div>
+<div class="modal-body">
+<div class="progress">
+<div id="process" class="progress-bar" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" style="width:10%;">10%</div>
+</div>
+</div>
+<div class="modal-footer">
+<button id="pbtn" type="button" class="btn btn-primary" data-dismiss="modal" disabled="disabled">完成</button>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="modal fade" id="showstat2" tabindex="-2" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+<h4 class="modal-title" id="myModalLabel">正在初始化，请稍后.......</h4>
+</div>
+<div class="modal-body">
+<div class="progress">
+<div id="process2" class="progress-bar" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" style="width:10%;">10%</div>
+</div>
+</div>
+<div class="modal-footer">
+<button id="pbtn2" type="button" class="btn btn-primary" data-dismiss="modal" disabled="disabled">完成</button>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="modal fade" id="showstat3" tabindex="-2" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+<h4 class="modal-title" id="myModalLabel">正在系统重建，请稍后.......</h4>
+</div>
+<div class="modal-body">
+<div class="progress">
+<div id="process3" class="progress-bar" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" style="width:10%;">10%</div>
+</div>
+</div>
+<div class="modal-footer">
+<button id="pbtn3" type="button" class="btn btn-primary" data-dismiss="modal" disabled="disabled">完成</button>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="modal fade" id="showstat4" tabindex="-2" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+<h4 class="modal-title" id="myModalLabel">正在等待服务器连接.......</h4>
+</div>
+<div class="modal-body">
+等待服务器准备.....
+</div>
+<div class="modal-footer">
+</div>
+</div>
+</div>
+
+</div>
+</body>
+<script src="./static/vendor/jquery-1.9.1.min.js" type="text/javascript"></script>
+<script src="./static/vendor/js/bootstrap.min.js" type="text/javascript"></script>
+<script src="./static/vendor/js/bootstrap-paginator.js" type="text/javascript"></script>
+<script src="./static/app.js" type="text/javascript"></script>
+</html>
