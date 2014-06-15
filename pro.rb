@@ -3,7 +3,7 @@
 # # @Author: wujian
 # # @Date:   2014-05-05 16:56:10
 # # @Last Modified by:   wujian
-# # @Last Modified time: 2014-06-15 11:09:15
+# # @Last Modified time: 2014-06-15 13:39:52
 
 # require File.dirname(__FILE__)+"/searcher.rb"
 # # require 'yaml'
@@ -118,10 +118,10 @@
 # end
 
 
-require File.expand_path("../nlpir", __FILE__)
-Nlpir.nlpir_init(File.dirname(__FILE__), UTF8_CODE)
-puts Nlpir.text_proc("我爱北京天安门")
-Nlpir.nlpir_exit()
+# require File.expand_path("../nlpir", __FILE__)
+# Nlpir.nlpir_init(File.dirname(__FILE__), UTF8_CODE)
+# puts Nlpir.text_proc("我爱北京天安门")
+# Nlpir.nlpir_exit()
 # require 'listen'
 # require 'rbconfig'
 # if RbConfig::CONFIG['target_os'] =~ /mswin|mingw|cygwin/i
@@ -176,3 +176,30 @@ Nlpir.nlpir_exit()
 # 			listener.stop
 # 		end
 # 	end
+require 'benchmark'
+require 'yaml'
+require 'json'
+# f = File.dirname(__FILE__)+"/dex/core_words_list.yaml"
+# f2 = File.dirname(__FILE__)+"/dex/core_words_list.json"
+
+# index = {}
+# File.open(File.dirname(__FILE__)+"/dex/stop_words_list.yaml") do |f|
+# 	index = YAML.load(f.read)
+# end
+
+
+# File.open(f2,"w") do |f|
+# 	f << index.to_json
+# end
+Benchmark.bmbm(10) do |t|
+	t.report('yaml') {
+		File.open(File.dirname(__FILE__)+"/dex/stop_words_list.yaml") do |f|
+			index = YAML.load(f.read)
+		end
+	}
+	t.report('json') {
+		File.open(File.dirname(__FILE__)+"/dex/core_words_list.json") do |f|
+			index = YAML.load(f.read)
+		end
+	}
+end
