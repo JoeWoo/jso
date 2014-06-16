@@ -125,7 +125,7 @@
                                  show_page("all",page,size);
                             }
                         }
-                    $('#pager').bootstrapPaginator(options);               
+                    $('#pager').bootstrapPaginator(options);
             }else{
                 $("#result").html(data.result);
             }
@@ -160,11 +160,11 @@
                             }
                         }
 
-                    $('#pager').bootstrapPaginator(options);      
+                    $('#pager').bootstrapPaginator(options);
              }else{
                 $("#result").html(data.result);
              }
-               
+
          } else {
              alert("查找失败！");
          }
@@ -295,6 +295,14 @@
      }
  };
 
+function vote(docid) {
+     var markers = {
+         "cmd": "vote",
+         "text": docid
+     };
+     var msg = JSON.stringify(markers);
+     ws.send(msg);
+};
  //////////////////////////////////
  function clear_checkbox() {
      var title = $('#control-check').text();

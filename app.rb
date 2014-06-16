@@ -140,11 +140,22 @@ begin
 					threadpool[0]=Thread.new{
 						monitor(db,indexer)
 					}
+				when "vote"
+					docid = data['text'].to_i
+					@query.each_key{  |term_id|
+						if !inverted_index[term_id][1][docid].nil?
+							inverted_index[term_id][1][docid] += 1
+							puts "#{term_id},#{docid}"
+						else
+							inverted_index[term_id][1][docid] = 1
+						end
+					}
 				when "search"
 					str = data['text']
 					type = data['type']
 					searcher = Searcher.new(inverted_index, delete_index, add_index)
 					querymap = QueryHelper.process(str, inverted_index)
+					@query = querymap
 					#search
 					t = Time.now
 						result = searcher.search(querymap)
@@ -155,7 +166,42 @@ begin
 						if result.empty? == false
 							#sort by rank
 							result = result.sort {|a, b| b[1] <=> a[1]}
+							# 加入点击干扰排名
+							# Rank = v/(v+m) Sim + m/(v+m) average(Sim)
+							sim_sum = 0
+							result.each{  |result_info|
+								sim_sum += result_info[1]
+							}
+							sim_average = sim_sum/result.length
+							m = 1
+							result.each{  |result_info|
+								v = 0
+								querymap.each_key{  |term_id|
+									vote_i = inverted_index[term_id][1][result_info[0]]
+									v += vote_i if !vote_i.nil?
+								}
+								result_info[1] = Float(v)/(v+m)*result_info[1] + Float(m)/(v+m)*sim_average
+							}
+
 							#puts the rankpage
+							result = result.sort {|a, b| b[1] <=> a[1]}
+							m = 0
+							querymap.each_key{  |term_id|
+								vote_i = inverted_index[term_id][1][result[-1][0]]
+								m += vote_i if !vote_i.nil?
+							}
+							result.each{  |result_info|
+								v = 0
+								querymap.each_key{  |term_id|
+									vote_i = inverted_index[term_id][1][result_info[0]]
+									v += vote_i if !vote_i.nil?
+								}
+								result_info[1] = Float(v)/(v+m)*result_info[1] + Float(m)/(v+m)*sim_average
+							}
+
+							#puts the rankpage
+							result = result.sort {|a, b| b[1] <=> a[1]}
+
 							id = 0
 							result.each do |docinfo|
 								docid = docinfo[0]
@@ -187,7 +233,7 @@ begin
 								abstract = docinfo[4]
 								item1="#{id}-0"
 								item2="#{id}-1"
-								result_list << "<li id=\"#{id}\" class=\"item\"><div id=\"#{item1}\" class=\"filename\"><a class=\"filename_link\" href=\"file://#{fullpath}\">#{filename}</a><br/></div><div id=\"#{item2}\"><a class=\"filepath\" href=\"file://#{fullpath}\">#{fullpath}</a><p class=\"abstract\">#{abstract}	</p></div></li> "
+								result_list << "<li id=\"#{id}\" class=\"item\"><div id=\"#{item1}\" class=\"filename\"><a class=\"filename_link\" href=\"file://#{fullpath}\" onclick=\"vote(#{docid})\">#{filename}</a><br/></div><div id=\"#{item2}\"><a class=\"filepath\" href=\"file://#{fullpath}\" onclick=\"vote(#{docid})\">#{fullpath}</a><p class=\"abstract\">#{abstract}	</p></div></li> "
 								id+=1
 							end
 						else
@@ -206,6 +252,7 @@ begin
 					str = data['text']
 					searcher = Searcher.new(inverted_index, delete_index, add_index)
 					querymap = QueryHelper.process(str, inverted_index)
+					@query = querymap
 					#search
 					t = Time.now
 						result = searcher.search(querymap)
@@ -216,7 +263,41 @@ begin
 						if result.empty? == false
 							#sort by rank
 							result = result.sort {|a, b| b[1] <=> a[1]}
+
+							# 加入点击干扰排名
+							# Rank = v/(v+m) Sim + m/(v+m) average(Sim)
+							sim_sum = 0
+							result.each{  |result_info|
+								sim_sum += result_info[1]
+							}
+							sim_average = sim_sum/result.length
+							m = 1
+							result.each{  |result_info|
+								v = 0
+								querymap.each_key{  |term_id|
+									vote_i = inverted_index[term_id][1][result_info[0]]
+									v += vote_i if !vote_i.nil?
+								}
+								result_info[1] = Float(v)/(v+m)*result_info[1] + Float(m)/(v+m)*sim_average
+							}
 							#puts the rankpage
+							result = result.sort {|a, b| b[1] <=> a[1]}
+							m = 0
+							querymap.each_key{  |term_id|
+								vote_i = inverted_index[term_id][1][result[-1][0]]
+								m += vote_i if !vote_i.nil?
+							}
+							result.each{  |result_info|
+								v = 0
+								querymap.each_key{  |term_id|
+									vote_i = inverted_index[term_id][1][result_info[0]]
+									v += vote_i if !vote_i.nil?
+								}
+								result_info[1] = Float(v)/(v+m)*result_info[1] + Float(m)/(v+m)*sim_average
+							}
+
+							#puts the rankpage
+							result = result.sort {|a, b| b[1] <=> a[1]}
 							id = 0
 							result.each do |docinfo|
 								docid = docinfo[0]
@@ -227,7 +308,7 @@ begin
 								abstract = docinfo[4]
 								item1="#{id}-0"
 								item2="#{id}-1"
-								result_list << "<li id=\"#{id}\" class=\"item\"><div id=\"#{item1}\" class=\"filename\"><a class=\"filename_link\" href=\"file://#{fullpath}\">#{filename}</a><br/></div><div id=\"#{item2}\"><a class=\"filepath\" href=\"file://#{fullpath}\">#{fullpath}</a><p class=\"abstract\">#{abstract}	</p></div></li> "
+								result_list << "<li id=\"#{id}\" class=\"item\"><div id=\"#{item1}\" class=\"filename\"><a class=\"filename_link\" href=\"file://#{fullpath}\" onclick=\"vote(#{docid})\">#{filename}</a><br/></div><div id=\"#{item2}\"><a class=\"filepath\" href=\"file://#{fullpath}\" onclick=\"vote(#{docid})\">#{fullpath}</a><p class=\"abstract\">#{abstract}	</p></div></li> "
 								id+=1
 							end
 						else
@@ -277,6 +358,9 @@ rescue Exception => e
 	p e
 	puts "server error!"
 ensure
+	puts "正在保存信息"
+	dexfile.inverted2file(inverted_index,"main")
+	dexfile.inverted2file(delete_index,"delete")
 	Nlpir.nlpir_exit()
 end
 

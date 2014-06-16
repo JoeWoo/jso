@@ -3,7 +3,7 @@
 # @Author: wujian
 # @Date:   2014-05-06 15:45:07
 # @Last Modified by:   wujian
-# @Last Modified time: 2014-05-24 21:48:33
+# @Last Modified time: 2014-06-16 10:26:29
 require File.dirname(__FILE__)+"/db.rb"
 require File.dirname(__FILE__)+"/filetype_helper.rb"
 require File.dirname(__FILE__)+"/nlpir.rb"
@@ -29,7 +29,7 @@ class Indexer
 		@delete_index["init"] = 123
 		@add_index.clear
 		@add_index["init"] = 123
-		
+
 		@db.init_clear
 
 		save_inverted_index()
@@ -205,10 +205,46 @@ class Indexer
 		begin
 			filepath.encode!('UTF-8')
 			puts "正在索引#{filepath}........"
+			site = filepath.rindex('/')
+			filename = filepath[site+1..-1]
+			puts filename
+	#开始处理
+
+			#分词标题
+			title_index ={}
+			most_title_term_times = 0
+			most_title_term = -1
+			title_weight = 3
+			title = Nlpir.seg(filename)
+			title.each{  |word|
+				##查词id
+				id = -1
+				if  Nlpir.core_words_exist?(word) == false
+					id = (Nlpir.get_core_words_size() +1)
+					Nlpir.set_core_words(word, id)
+				else
+					id =  Nlpir.get_core_words_id(word)
+				end
+
+				##信息标引 标引频数
+				tmp2 = title_index[id]
+				if tmp2.nil?
+					title_index[id] = 1
+				else
+					title_index[id]+=1
+				end
+
+				tmp3 =title_index[id]
+				if tmp3 > most_title_term_times
+					most_title_term_times = tmp3
+					most_title_term = id
+				end
+			}
+
 			text = @parser.all2text(filepath)
 			if !text.empty?
 				# 临时变量
-				abstract_end = text.length >= 140 ? 140 : text.length  
+				abstract_end = text.length >= 140 ? 140 : text.length
 				abstract = text[0..abstract_end].encode('utf-8', :invalid => :replace, :undef => :replace,replace: "?")
 				abstract.strip!
 				abstract.chomp!
@@ -222,11 +258,9 @@ class Indexer
 				index = {:docid => -1 , :docpath => "", :most_term=> 0, :most_term_times => 0,:text => abstract, :my_index => {}, }
 
 
-				#开始处理
-
-				#分词
+				#分词正文
 				m = Nlpir.seg(text)
-				#标引、倒排
+				#标引、倒排正文
 				m.each{  |word|
 					##查词id
 					id = -1
@@ -252,28 +286,44 @@ class Indexer
 					end
 				}
 				# 填写index中的除my_index外的字段
-			    index[:docid] = docid
+			      index[:docid] = docid
 				index[:docpath] =  filepath
 				index[:most_term] = most_term
 				index[:most_term_times] = most_term_times
 				## 计算频率 （归一化）
+
+
 				index[:my_index].each {   |key, weight|
-					index[:my_index][key] = 0.5 + 0.5 * (weight / Float(most_term_times))
+					index[:my_index][key] = (weight / Float(most_term_times))
 					##倒排
+				}
+
+				title_index.each{  |key,weight|
+					w = (weight / Float(most_title_term_times))*title_weight
+					title_index[key] = w
+					if index[:my_index][key].nil?
+						index[:my_index][key] = w
+					else
+						index[:my_index][key] += w
+					end
+				}
+
+				index[:my_index].each_key{  |key|
 					tmp = @inverted_index[key]
 					if tmp.nil? ###倒排表中无该词
-						@inverted_index[key] = [0,Array.new()]
+						@inverted_index[key] = [0,Hash.new()]
 					end
 					@inverted_index[key][0] += 1###个数加1
-					@inverted_index[key][1] << docid ###文档编号进数组
+					@inverted_index[key][1][docid] = 1 ###文档编号进hash
 				}
+
 				# 持久化正向索引
 				@dexfile.index2file(index)
 			else
 				puts filepath +" has no text! skip!"
 			end
-			# # rescue Exception => e
-			# # 	puts e
+		rescue Exception => e
+			p e
 			# 	puts  filepath+" index error!"
 		end
 	end

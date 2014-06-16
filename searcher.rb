@@ -17,7 +17,7 @@ class Searcher
 		p query_map
 		num_docs = @db.get_Doc_sum[0][0]
 		query_result = Array.new
-		
+
 		rdocs_map = Hash.new #相关文档hashmap
 
 		# 生成查询向量权值空间
@@ -34,21 +34,21 @@ class Searcher
 
 			# 相关文档index调入内存
 			docs_found = invertedItem[1]
-			docs_found.each{ |docid|
-				if (!@delete_index.has_key?(docid)) && (!rdocs_map.has_key?(docid)) 
+			docs_found.each_key{ |docid|
+				if (!@delete_index.has_key?(docid)) && (!rdocs_map.has_key?(docid))
 					rdocs_map[docid] =  @dexfile.get_index(docid)
 				end
 			}
 		end
 
-		# 生成相关文档权值空间
+		# 生成相关文档权值矩阵空间
 		mold_docs_list = Array.new
 		rdocs_map.each do |docid, index|
 			mold_doc = 0.0
-			index[:my_index].each do |id, tf|
+			index[:my_index].each do |id, wtf|
 				ni = @inverted_index[id][0]
 				idf = 1.0 + Math.log(num_docs / Float(ni))
-				weight = tf * idf
+				weight = wtf * idf
 				index[:my_index][id] = weight
 				mold_doc += weight**2
 			end
